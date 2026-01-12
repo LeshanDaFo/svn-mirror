@@ -74,6 +74,7 @@
 #include "c64-midi.h"
 #include "c64tpi.h"
 #include "comal80.h"
+#include "comalramrom.h"
 #include "capture.h"
 #include "debugcart.h"
 #include "delaep256.h"
@@ -265,6 +266,9 @@ static const cmdline_option_t cmdline_options[] =
     { "-cartcomal", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
       cart_attach_cmdline, (void *)CARTRIDGE_COMAL80, NULL, NULL,
       "<Name>", "Attach raw 64KiB Comal 80 cartridge image" },
+    { "-cartcomalramrom", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
+      cart_attach_cmdline, (void *)CARTRIDGE_COMALRAMROM, NULL, NULL,
+      "<Name>", "Attach raw 64KiB Comal 80 ramrom cartridge image" },
     { "-cartdep256", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
       cart_attach_cmdline, (void *)CARTRIDGE_DELA_EP256, NULL, NULL,
       "<Name>", "Attach raw Dela EP256 cartridge image" },
@@ -961,6 +965,8 @@ int cart_bin_attach(int type, const char *filename, uint8_t *rawcart)
             return capture_bin_attach(filename, rawcart);
         case CARTRIDGE_COMAL80:
             return comal80_bin_attach(filename, rawcart);
+        case CARTRIDGE_COMALRAMROM:
+            return comalramrom_bin_attach(filename, rawcart);
         case CARTRIDGE_DELA_EP64:
             return delaep64_bin_attach(filename, rawcart);
         case CARTRIDGE_DELA_EP7x8:
@@ -1201,6 +1207,9 @@ void cart_attach(int type, uint8_t *rawcart)
         case CARTRIDGE_COMAL80:
             comal80_config_setup(rawcart);
             break;
+        case CARTRIDGE_COMALRAMROM:
+            comalramrom_config_setup(rawcart);
+            break;    
         case CARTRIDGE_DELA_EP256:
             delaep256_config_setup(rawcart);
             break;
@@ -1819,6 +1828,9 @@ void cart_detach(int type)
         case CARTRIDGE_COMAL80:
             comal80_detach();
             break;
+        case CARTRIDGE_COMALRAMROM:
+            comalramrom_detach();
+            break;
         case CARTRIDGE_DELA_EP64:
             delaep64_detach();
             break;
@@ -2132,6 +2144,9 @@ void cartridge_init_config(void)
                 break;
             case CARTRIDGE_COMAL80:
                 comal80_config_init();
+                break;
+            case CARTRIDGE_COMALRAMROM:
+                comalramrom_config_init();
                 break;
             case CARTRIDGE_DELA_EP64:
                 delaep64_config_init();
@@ -2585,7 +2600,10 @@ void cartridge_powerup(void)
         case CARTRIDGE_CAPTURE:
             capture_powerup();
             break;
-        case CARTRIDGE_EASYFLASH:
+        case CARTRIDGE_COMALRAMROM:
+            comalramrom_powerup();
+            break;
+    case CARTRIDGE_EASYFLASH:
             easyflash_powerup();
             break;
         case CARTRIDGE_KCS_POWER:
@@ -3503,6 +3521,11 @@ int cartridge_snapshot_write_modules(struct snapshot_s *s)
                         return -1;
                     }
                     break;
+                case CARTRIDGE_COMALRAMROM:
+                    if (comalramrom_snapshot_write_module(s) < 0) {
+                        return -1;
+                    }
+                    break;
                 case CARTRIDGE_DELA_EP64:
                     if (delaep64_snapshot_write_module(s) < 0) {
                         return -1;
@@ -4125,6 +4148,11 @@ int cartridge_snapshot_read_modules(struct snapshot_s *s)
                     break;
                 case CARTRIDGE_COMAL80:
                     if (comal80_snapshot_read_module(s) < 0) {
+                        goto fail2;
+                    }
+                    break;
+                case CARTRIDGE_COMALRAMROM:
+                    if (comalramrom_snapshot_read_module(s) < 0) {
                         goto fail2;
                     }
                     break;

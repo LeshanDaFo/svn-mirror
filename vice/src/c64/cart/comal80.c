@@ -92,7 +92,7 @@
     bit 6   : GAME + EXROM
     bit 5   : -
     bit 4   : -
-    bit 3   : -
+    bit 3   : RAM/ROM select (0 = ROM, 1 = RAM)
     bit 2   : switches to the optional third socket (additional 2x16k)
     bit 0-1 : selects EPROM+bank (4x16k bank)
 
@@ -105,9 +105,19 @@ static int extrarom = 0;
 #define VARIANT_BLACK   1
 static int comal80_variant = VARIANT_BLACK;
 
+// RAM bank select flag and current bank variable
+static int currbank_is_ram = 0;
+static int currbank = 0;
+
+// RAM banks storage: 8 RAM banks, each bank has LO and HI 16KB blocks
+static uint8_t comal80_ram_lo[8][0x2000];  // $8000-$9FFF
+static uint8_t comal80_ram_hi[8][0x2000];  // $A000-$BFFF
+
+// The existing ROM banks are assumed to be in roml_banks and romh_banks arrays (already declared elsewhere)
+
 static void comal80_io1_store(uint16_t addr, uint8_t value)
 {
-    int cmode, currbank;
+    int cmode;
 
     if (comal80_variant == VARIANT_GREY) {
         static int modes[4] = {
@@ -116,11 +126,15 @@ static void comal80_io1_store(uint16_t addr, uint8_t value)
         currregval = value & 0x63;
         cmode = modes[(value & 0x60) >> 5];
         currbank = value & 3;
+        currbank_is_ram = 0; // Grey variant does not support RAM bank switching via bit3
     } else {
-        currregval = value & 0x47;
+        // Black variant:
+        currregval = value & 0x4F; // mask bits: bit7=0, bit6, bit3, bit2, bits0-1-2-3 plus bit6 retained
+        currbank = value & 7;      // bits 0-2 select bank (0-7)
+        currbank_is_ram = (value & 8) ? 1 : 0; // bit 3 for RAM/ROM select
         cmode = (value & 0x40) ? CMODE_RAM : CMODE_16KGAME;
-        currbank = value & 7;
     }
+
 #ifdef DEBUGCART
     if (currregval != value) {
         static unsigned int last = 0;
@@ -131,7 +145,16 @@ static void comal80_io1_store(uint16_t addr, uint8_t value)
         }
     }
 #endif
-    cart_config_changed_slotmain(0, (uint8_t)(cmode | (currbank << CMODE_BANK_SHIFT)), CMODE_READ);
+
+    // Update cartridge memory config according to mode and bank
+    if (currbank_is_ram) {
+        // RAM mode, access memory mapped to RAM banks
+        // Using CMODE_RAM mode (custom mode signifying RAM enabled) plus bank shift
+        cart_config_changed_slotmain(0, (CMODE_RAM | (currbank << CMODE_BANK_SHIFT)), CMODE_READ);
+    } else {
+        // ROM mode, normal ROM banking
+        cart_config_changed_slotmain(0, (CMODE_16KGAME | (currbank << CMODE_BANK_SHIFT)), CMODE_READ);
+    }
 }
 
 static uint8_t comal80_io1_peek(uint16_t addr)
@@ -139,12 +162,49 @@ static uint8_t comal80_io1_peek(uint16_t addr)
     return currregval;
 }
 
+// Read function to return data from current bank mapped either to ROM or RAM
+static uint8_t comal80_read(uint16_t addr)
+{
+    uint16_t offset = addr & 0x1FFF; // 8KB offset inside bank
+    if (currbank_is_ram) {
+        // RAM mode
+        if (addr >= 0x8000 && addr < 0xA000) {
+            return comal80_ram_lo[currbank][offset];
+        } else if (addr >= 0xA000 && addr < 0xC000) {
+            return comal80_ram_hi[currbank][offset];
+        }
+    } else {
+        // ROM mode
+        if (addr >= 0x8000 && addr < 0xA000) {
+            return roml_banks[currbank * 0x2000 + offset];
+        } else if (addr >= 0xA000 && addr < 0xC000) {
+            return romh_banks[currbank * 0x2000 + offset];
+        }
+    }
+    return 0xFF; // default (open bus)
+}
+
+// Write function to write data to the RAM bank (no operation on ROM)
+static void comal80_write(uint16_t addr, uint8_t val)
+{
+    uint16_t offset = addr & 0x1FFF;
+    if (currbank_is_ram) {
+        if (addr >= 0x8000 && addr < 0xA000) {
+            comal80_ram_lo[currbank][offset] = val;
+        } else if (addr >= 0xA000 && addr < 0xC000) {
+            comal80_ram_hi[currbank][offset] = val;
+        }
+    }
+    // no writes to ROM area
+}
+
 static int comal80_dump(void)
 {
     mon_out("Cartridge variant: %s", (comal80_variant == VARIANT_GREY) ? "grey" : "black");
     mon_out("Extra eprom is installed: %s\n", extrarom ? "yes" : "no");
     mon_out("Register value: $%02x\n", (unsigned int)currregval);
-    mon_out(" bank: %d/%d\n", currregval & 7, extrarom ? 8 : 4);
+    mon_out(" bank: %d/%d\n", currbank, extrarom ? 8 : 4);
+    mon_out(" mode: %s\n", currbank_is_ram ? "RAM" : "ROM");
     return 0;
 }
 
@@ -157,8 +217,8 @@ static io_source_t comal80_device = {
     0xde00, 0xdeff, 0xff,   /* range for the device, address is ignored, reg:$de00, mirrors:$de01-$deff */
     0,                      /* read never valid, device is write only */
     comal80_io1_store,      /* store function */
-    NULL,                   /* NO poke function */
-    NULL,                   /* NO read function */
+    comal80_write,          /* poke function for writes to RAM area */
+    comal80_read,           /* read function to read from ROM or RAM banks */
     comal80_io1_peek,       /* peek function */
     comal80_dump,           /* device state information dump function */
     CARTRIDGE_COMAL80,      /* cartridge ID */
@@ -179,6 +239,8 @@ void comal80_config_init(void)
 {
     cart_config_changed_slotmain(CMODE_16KGAME, CMODE_16KGAME, CMODE_READ);
     currregval = 0;
+    currbank = 0;
+    currbank_is_ram = 0;
 }
 
 void comal80_config_setup(uint8_t *rawcart)
@@ -204,6 +266,12 @@ void comal80_config_setup(uint8_t *rawcart)
         memcpy(&romh_banks[0xc000], &rawcart[0x1a000], 0x2000);
         memcpy(&roml_banks[0xe000], &rawcart[0x1c000], 0x2000);
         memcpy(&romh_banks[0xe000], &rawcart[0x1e000], 0x2000);
+    }
+
+    // Initialize RAM banks to 0xff or zero if desired
+    for (int i = 0; i < 8; i++) {
+        memset(comal80_ram_lo[i], 0xFF, 0x2000);
+        memset(comal80_ram_hi[i], 0xFF, 0x2000);
     }
 
     cart_config_changed_slotmain(CMODE_8KGAME, CMODE_8KGAME, CMODE_READ);
@@ -318,11 +386,13 @@ void comal80_detach(void)
    BYTE  | revision | hardware variant
    ARRAY | ROML     | 32768 or 65536 BYTES of ROML data
    ARRAY | ROMH     | 32768 or 65536 BYTES of ROMH data
+   ARRAY | RAMLO    | 65536 BYTES of RAMLO data (8 x 8KB)
+   ARRAY | RAMHI    | 65536 BYTES of RAMHI data (8 x 8KB)
  */
 
 static const char snap_module_name[] = "CARTCOMAL";
-#define SNAP_MAJOR   0
-#define SNAP_MINOR   2
+#define SNAP_MAJOR   1
+#define SNAP_MINOR   0
 
 int comal80_snapshot_write_module(snapshot_t *s)
 {
@@ -339,7 +409,9 @@ int comal80_snapshot_write_module(snapshot_t *s)
         || (SMW_B(m, (uint8_t)extrarom) < 0)
         || (SMW_B(m, (uint8_t)comal80_variant) < 0)
         || (SMW_BA(m, roml_banks, extrarom ? 0x10000 : 0x8000) < 0)
-        || (SMW_BA(m, romh_banks, extrarom ? 0x10000 : 0x8000) < 0)) {
+        || (SMW_BA(m, romh_banks, extrarom ? 0x10000 : 0x8000) < 0)
+        || (SMW_BA(m, comal80_ram_lo, 0x10000) < 0)
+        || (SMW_BA(m, comal80_ram_hi, 0x10000) < 0)) {
         snapshot_module_close(m);
         return -1;
     }
@@ -369,11 +441,16 @@ int comal80_snapshot_read_module(snapshot_t *s)
         || (SMR_B_INT(m, &extrarom) < 0)
         || (SMR_B_INT(m, &comal80_variant) < 0)
         || (SMR_BA(m, roml_banks, extrarom ? 0x10000 : 0x8000) < 0)
-        || (SMR_BA(m, romh_banks, extrarom ? 0x10000 : 0x8000) < 0)) {
+        || (SMR_BA(m, romh_banks, extrarom ? 0x10000 : 0x8000) < 0)
+        || (SMR_BA(m, comal80_ram_lo, 0x10000) < 0)
+        || (SMR_BA(m, comal80_ram_hi, 0x10000) < 0)) {
         goto fail;
     }
 
     snapshot_module_close(m);
+
+    currbank = currregval & 7;
+    currbank_is_ram = (currregval & 8) ? 1 : 0;
 
     return comal80_common_attach();
 

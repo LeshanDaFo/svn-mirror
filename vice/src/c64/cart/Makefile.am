@@ -70,6 +70,8 @@ libc64cart_a_SOURCES = \
 	clockport-rrnet.h \
 	comal80.c \
 	comal80.h \
+	comalramrom.c \
+	comalramrom.h \
 	cpmcart.c \
 	cpmcart.h \
 	daa.c \

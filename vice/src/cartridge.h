@@ -275,6 +275,7 @@ void cartridge_sound_chip_init(void);
 #define CARTRIDGE_PROFIDOS             84 /* profidos.c */
 #define CARTRIDGE_MAGIC_DESK_16        85 /* magicdesk16.c */
 #define CARTRIDGE_MEGABYTER            86 /* megabyter.c */
+#define CARTRIDGE_COMALRAMROM          86 /* comalramrom.c */
 #define CARTRIDGE_LAST                 86 /* cartconv: last cartridge in list */
 
 /* list of canonical names for the c64 cartridges:
@@ -306,6 +307,7 @@ void cartridge_sound_chip_init(void);
 #define CARTRIDGE_NAME_GS                 "C64 Games System" /* http://retro.lonningdal.net/home.php?page=Computers&select=c64gs&image=c64gs4.jpg */
 #define CARTRIDGE_NAME_CAPTURE            "Capture" /* see manual http://rr.pokefinder.org/wiki/Capture */
 #define CARTRIDGE_NAME_COMAL80            "Comal 80" /* http://www.retroport.de/C64_C128_Hardware.html */
+#define CARTRIDGE_NAME_COMALRAMROM        "Comal 80 ram rom"
 #define CARTRIDGE_NAME_CPM                "CP/M cartridge"
 #define CARTRIDGE_NAME_DREAN              "Drean"
 #define CARTRIDGE_NAME_MIDI_DATEL         "Datel MIDI"

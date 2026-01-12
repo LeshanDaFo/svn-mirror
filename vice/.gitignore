@@ -1,0 +1,5 @@
+.DS_Store
+*.in # Für generierte Makefile.in
+**/.DS_Store # Rekursiv in Unterordnern
+*.in
+comalramrom copy.c # Für die Kopie

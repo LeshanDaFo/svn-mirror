@@ -71,6 +71,7 @@
 #include "c64-generic.h"
 #include "c64tpi.h"
 #include "comal80.h"
+#include "comalramrom.h"
 #include "capture.h"
 #include "delaep256.h"
 #include "delaep64.h"
@@ -152,7 +153,9 @@
 #else
 #define DBG(x)
 #endif
-
+#ifndef CARTRIDGE_NAME_COMALRAMROM
+#define CARTRIDGE_NAME_COMALRAMROM "COMAL RAM/ROM"
+#endif
 /*
     as a first step to a completely generic cart system, everything should
     get reorganised based on the following assumptions:
@@ -260,6 +263,7 @@ static cartridge_info_t cartlist[] = {
     { CARTRIDGE_NAME_BMPDATATURBO,        CARTRIDGE_BMPDATATURBO,        CARTRIDGE_GROUP_UTIL },
     { CARTRIDGE_NAME_CAPTURE,             CARTRIDGE_CAPTURE,             CARTRIDGE_GROUP_FREEZER },
     { CARTRIDGE_NAME_COMAL80,             CARTRIDGE_COMAL80,             CARTRIDGE_GROUP_UTIL },
+    { CARTRIDGE_NAME_COMALRAMROM,         CARTRIDGE_COMALRAMROM,         CARTRIDGE_GROUP_UTIL },
     { CARTRIDGE_NAME_DELA_EP256,          CARTRIDGE_DELA_EP256,          CARTRIDGE_GROUP_UTIL },
     { CARTRIDGE_NAME_DELA_EP64,           CARTRIDGE_DELA_EP64,           CARTRIDGE_GROUP_UTIL },
     { CARTRIDGE_NAME_DELA_EP7x8,          CARTRIDGE_DELA_EP7x8,          CARTRIDGE_GROUP_UTIL },
@@ -445,6 +449,7 @@ static int set_cartridge_type(int val, void *param)
         case CARTRIDGE_BMPDATATURBO:
         case CARTRIDGE_CAPTURE:
         case CARTRIDGE_COMAL80:
+        case CARTRIDGE_COMALRAMROM:
         case CARTRIDGE_DELA_EP64:
         case CARTRIDGE_DELA_EP7x8:
         case CARTRIDGE_DELA_EP256:
@@ -809,6 +814,9 @@ static int crt_attach(const char *filename, uint8_t *rawcart)
                 break;
             case CARTRIDGE_COMAL80:
                 rc = comal80_crt_attach(fd, rawcart, header.subtype);
+                break;
+            case CARTRIDGE_COMALRAMROM:
+                rc = comalramrom_crt_attach(fd, rawcart);
                 break;
             case CARTRIDGE_DELA_EP256:
                 rc = delaep256_crt_attach(fd, rawcart);

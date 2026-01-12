@@ -62,6 +62,7 @@
 #include "c64-midi.h"
 #include "c64tpi.h"
 #include "comal80.h"
+#include "comalramrom.h"
 #include "capture.h"
 #include "delaep256.h"
 #include "delaep64.h"
@@ -633,6 +634,8 @@ static uint8_t roml_read_slotmain(uint16_t addr)
             return actionreplay3_roml_read(addr);
         case CARTRIDGE_ATOMIC_POWER:
             return atomicpower_roml_read(addr);
+        case CARTRIDGE_COMALRAMROM:
+            return comalramrom_roml_read(addr);
         case CARTRIDGE_EASYFLASH:
             return easyflash_roml_read(addr);
         case CARTRIDGE_EPYX_FASTLOAD:
@@ -914,6 +917,8 @@ static uint8_t romh_read_slotmain(uint16_t addr)
             return atomicpower_romh_read(addr);
         case CARTRIDGE_CAPTURE:
             return capture_romh_read(addr);
+        case CARTRIDGE_COMALRAMROM:
+            return comalramrom_romh_read(addr);
         case CARTRIDGE_EASYFLASH:
             return easyflash_romh_read(addr);
         case CARTRIDGE_FINAL_I:
@@ -1263,6 +1268,9 @@ void romh_no_ultimax_store(uint16_t addr, uint8_t value)
             atomicpower_romh_store(addr, value);
             return; /* writes to cartridge RAM should not fall through to C64 RAM in mode 0x22 */
             break;
+        case CARTRIDGE_COMALRAMROM:
+            comalramrom_romh_store(addr, value);
+            break;
         case CARTRIDGE_IDE64:
             ide64_rom_store(addr, value);
             break;
@@ -1321,6 +1329,9 @@ void roml_no_ultimax_store(uint16_t addr, uint8_t value)
             break;
         case CARTRIDGE_ATOMIC_POWER:
             atomicpower_roml_store(addr, value);
+            break;
+        case CARTRIDGE_COMALRAMROM:
+            comalramrom_roml_store(addr, value);
             break;
         case CARTRIDGE_IDE64:
             ide64_rom_store(addr, value);
@@ -1393,6 +1404,9 @@ void raml_no_ultimax_store(uint16_t addr, uint8_t value)
         case CARTRIDGE_ATOMIC_POWER:
             atomicpower_roml_store(addr, value);
             break;
+        case CARTRIDGE_COMALRAMROM:
+            comalramrom_roml_store(addr, value);
+            break;
         case CARTRIDGE_PAGEFOX:
             pagefox_roml_store(addr, value);
             break;
@@ -1435,6 +1449,9 @@ void ramh_no_ultimax_store(uint16_t addr, uint8_t value)
 
     /* "Main Slot" */
     switch (mem_cartridge_type) {
+        case CARTRIDGE_COMALRAMROM:
+            comalramrom_romh_store(addr, value);
+            break;
         case CARTRIDGE_PAGEFOX:
             pagefox_romh_store(addr, value);
             break;
