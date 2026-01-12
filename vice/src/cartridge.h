@@ -275,8 +275,8 @@ void cartridge_sound_chip_init(void);
 #define CARTRIDGE_PROFIDOS             84 /* profidos.c */
 #define CARTRIDGE_MAGIC_DESK_16        85 /* magicdesk16.c */
 #define CARTRIDGE_MEGABYTER            86 /* megabyter.c */
-#define CARTRIDGE_COMALRAMROM          86 /* comalramrom.c */
-#define CARTRIDGE_LAST                 86 /* cartconv: last cartridge in list */
+#define CARTRIDGE_COMALRAMROM          87 /* comalramrom.c */
+#define CARTRIDGE_LAST                 87 /* cartconv: last cartridge in list */
 
 /* list of canonical names for the c64 cartridges:
    note: often it is hard to determine "the" official name, let alone the way it
