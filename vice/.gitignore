@@ -1,5 +1,25 @@
+# macOS
 .DS_Store
-*.in # Für generierte Makefile.in
-**/.DS_Store # Rekursiv in Unterordnern
-*.in
-comalramrom copy.c # Für die Kopie
+
+# VSCode
+.vscode/
+
+# Autotools / Build
+autom4te.cache/
+aclocal.m4
+configure
+config.log
+config.status
+Makefile.in
+Makefile
+
+# temp files
+*.out
+*~
+missing
+compile
+depcomp
+ylwrap
+
+# generated docs
+doc/html/

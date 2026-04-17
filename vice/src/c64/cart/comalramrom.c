@@ -250,7 +250,7 @@ static int comalramrom_common_attach(void)
     comal_ram_sel_compat = 0;
 
     /* 16K GAME sichtbar machen (Flag je nach RAM/ROM kommt aus apply_config) */
-    comalramrom_apply_config();
+    /* comalramrom_apply_config(); */   /* testweise deaktiviert */
     return 0;
 }
 
@@ -416,7 +416,7 @@ void comalramrom_detach(void)
     if (comal_ram) { lib_free(comal_ram); comal_ram = NULL; }
 
     /* Fenster ausblenden */
-    cart_config_changed_slotmain(CMODE_RAM, CMODE_RAM, 0);
+       cart_config_changed_slotmain(CMODE_RAM, CMODE_RAM, 0);
 }
 
 void comalramrom_powerup(void)
@@ -437,7 +437,9 @@ void comalramrom_config_init(void)
 void comalramrom_config_setup(uint8_t *rawcart)
 {
     (void)rawcart;
-    comalramrom_remap_window();
+
+    /* Do not remap here.
+       Calling cart_config_changed_slotmain() from this path can crash x128. */
 }
 
 /* -----------------------------------------------------------

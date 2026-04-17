@@ -1283,11 +1283,13 @@ void cartridge_detach_image(int type)
         c128cartridge->detach_image(type);
     }
 
-    /* FIXME: cart_detach should take care of it */
-    DBG(("CART: unset cart config"));
-    cart_config_changed_slotmain(CMODE_RAM, CMODE_RAM, CMODE_READ);
+    if ((type != 0) && !cart_is_slotmain(type)) {
+        /* FIXME: cart_detach should take care of it */
+        DBG(("CART: unset cart config"));
+        cart_config_changed_slotmain(CMODE_RAM, CMODE_RAM, CMODE_READ);
 
-    cart_power_off();
+        cart_power_off();
+    }
 }
 
 /*
