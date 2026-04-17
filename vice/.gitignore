@@ -23,3 +23,6 @@ ylwrap
 
 # generated docs
 doc/html/
+
+# others
+tools/
